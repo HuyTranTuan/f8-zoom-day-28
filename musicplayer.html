@@ -12,7 +12,12 @@
     <link rel="stylesheet" href="./musicplayer.css">
 </head>
 <body>
-    
+    <div class="header">
+        <form action="" class="search-form">
+            <input type="text" id="search" class="search-input">
+            <i class="fas fa-search"></i>
+        </form>
+    </div>
     <div class="player">
         <!-- Dashboard -->
         <div class="dashboard">
@@ -40,7 +45,6 @@
                         <i class="fas fa-step-backward"></i>
                     </div>
                     <div class="btn btn-toggle-play">
-                        <!-- <i class="fas fa-pause icon-pause"></i> -->
                         <i class="fas fa-play icon-play"></i>
                     </div>
                     <div class="btn btn-next">
@@ -69,7 +73,13 @@
         </div>
 
         <!-- Playlist -->
-        <div class="playlist"></div>
+        <div class="container">
+            <div class="tabs">
+                <span class="tab active" data-tab="0">All</span>
+                <span class="tab" data-tab="1">Liked</span>
+            </div>
+            <div class="playlist"></div>
+        </div>
     </div>
 
     <!-- Design from: https://static.collectui.com/shots/3671744/musicloud-revolutionary-app-for-music-streaming-large -->

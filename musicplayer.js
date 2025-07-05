@@ -24,16 +24,21 @@ const muteVol = $('.fa-volume-mute');
 const smallVol = $('.fa-volume-down');
 const loudVol = $('.fa-volume-up');
 const volumeIcons = $$('.volume-icon');
+const preprogress = window.getComputedStyle(progress, "::after");
+const inputSearch = $('.search-input');
+const tabs = $$('.tab');
 
 const app = {
   _currentSong: {},
   _currentIndex: 0,
+  _currentDeg: 0,
   _isPlaying: false,
   _isRandom: false,
   _currentRepeateStatus: 0,
   _config: {},
   _Next: 1,
   _Prev: -1,
+  _likedSongs: [],
   
   _songs: [
     {
@@ -67,10 +72,8 @@ const app = {
   ],
   start: function () {
     this.render();
-    const songs = $$('.song');
-    songs.forEach(song => {
-      song.onclick = app._renderCurrentSong.bind(this);
-    });
+    this.addEvent();
+
     playBtn.onclick = this._playCurrentSong.bind(this);
     nextBtn.onclick = this._playNextOrPrevSong.bind(this, this._Next);
     prevBtn.onclick = this._playNextOrPrevSong.bind(this, this._Prev);
@@ -78,45 +81,139 @@ const app = {
     randomBtn.onclick = this._shuffleSongHandler.bind(this);
    
     audio.onloadedmetadata = this._updateTimeHandler.bind(this)
-    audio.ontimeupdate = this._updateTimeHandler.bind(this);
     audio.onended = this._handleEndedAudio.bind(this);
     audio.onvolumechange =  this._showVolumeIcon.bind(this);
 
-    volumeIcons.forEach(icon => icon.onclick = app._showVolume.bind(this));
+    volumeIcons.forEach(icon => icon.onclick = this._showVolume.bind(this));
     window.onclick = this._clickOutCloseVolume.bind(this);
     volume.addEventListener("mouseup", () => audio.volume = volume.value / 100);
     
-    document.onkeyup = function(event){
-      app._manipulateKeyUp(event);
-    };
+    document.onkeyup = this._manipulateKeyUp.bind(this);
 
-    progress.addEventListener("mousedown", (event) => {
-      // audio.currentTime = parseInt(event.target.value, 10);
-      // timeStart.textContent = this._toMMSS(parseInt(event.target.value, 10));
-      audio.preventDefault;
-    });
-    progress.addEventListener("mouseup", (event) => {
-      if(!audio.paused){
-        audio.pause();
-      }
+    progress.addEventListener("input", function(event){
       audio.currentTime = parseInt(event.target.value, 10);
-      timeStart.textContent = this._toMMSS(parseInt(event.target.value, 10));
-      audio.play();
-    });
+      timeStart.textContent = app._toMMSS(parseInt(event.target.value, 10));
+    })
 
-    progress.addEventListener("mouseenter", function(){
-      progress.addEventListener("mousemove", (e) => {
-        const elementWidth = e.target.offsetWidth;
-        const rect = e.target.getBoundingClientRect();
-        let currentPosition = e.clientX - rect.left;
-        let percentage = currentPosition / elementWidth * 100;
-        let currentSeeking = percentage * audio.duration /100
-        timeSeek.textContent = app._toMMSS(currentSeeking);
-      });
-    })
-    progress.addEventListener("mouseleave", function(){
+    progress.onmouseenter = this._showSeeking();
+    progress.onmouseleave = function(){
       timeSeek.textContent = "";
+      timeSeek.style.visibility = "hidden";
+      timeSeek.style.opacity = "0";
+      progress.style.setProperty('--afterBack', '0%');
+    }
+
+    cdThumb.addEventListener("mousedown", function(){
+      cdThumb.addEventListener("mousemove", app._moveDiskSeeking);
     })
+    cdThumb.addEventListener("mouseup", function(){
+      cdThumb.removeEventListener("mousemove", app._moveDiskSeeking);
+    })
+    tabs.forEach(tab => {
+      tab.onclick = this._tabActive.bind(this)
+    })
+    inputSearch.oninput = this._search.bind(this);
+
+  },
+
+  _removeTabActive:function(){
+    tabs.forEach(tab => {
+      tab.classList.remove('active');
+    });
+  },
+
+  _tabActive: function(event){
+    this._removeTabActive();
+    let tab = event.target;
+    let index = tab.dataset.tab;
+    tab.classList.add('active');
+    if(index == 0) {
+      this.render();
+      this.addEvent();
+    };
+    if(index == 1) {
+      this.renderArray(this._likedSongs);
+      this.addEvent();
+    }
+  },
+
+  _search: function(event){
+    event.preventDefault();
+    let input = this._escapeHTML(event.target.value);
+    let array = this._songs.filter(song => {
+      return song.name.toLowerCase().includes(input) || song.singer.toLowerCase().includes(input);
+    });
+    this.renderArray(array);
+  },
+
+  _addFav: function(event){
+    let index = event.target.closest('.song').dataset.index
+    let song = this._songs[index];
+    song.liked = !song.liked;
+    if(song.liked){
+      this._likedSongs.push(song);
+    } else { this._likedSongs.pop(song)}
+    this._renderOptionList(index);
+  },
+
+  _getDeg: function(opposite,adjacent){
+    let hypotenuse = Math.sqrt(Math.pow(opposite,2) + Math.pow(adjacent, 2));
+    let deg = Math.round(Math.acos(adjacent / hypotenuse) * 180 / Math.PI)
+    return deg;
+  },
+
+  _moveDiskSeeking: function(event){
+    const R = cdThumb.offsetHeight / 2;
+    let a = event.offsetX;
+    let b = event.offsetY;
+    let degreeA;
+    if(a <= R && b <= R){
+      if(a===R) degreeA = 0;
+      if(b===R) degreeA = 270;
+      a = R - a;
+      b = R - b;
+      degreeA = 360 - app._getDeg(a, b);
+    }
+    if(a > R && b < R){
+      a = a - R;
+      b = R - b;
+      degreeA = app._getDeg(a, b);
+    }
+    if(a >= R && b >= R){
+      if(b===R) degreeA = 90;
+      if(a===R) degreeA = 180;
+      a = a - R;
+      b = b - R;
+      degreeA = 180 - app._getDeg(a, b);
+    }
+    if(a < R && b > R){
+      a = R - a;
+      b = b - R;
+      degreeA = app._getDeg(a, b) + 180;
+    }
+    app._currentDeg = degreeA;
+
+    cdThumb.style.transform = `rotate(${app._currentDeg}deg)`;
+    audio.currentTime = app._currentDeg * audio.duration / 360;
+    progress.value = audio.currentTime;
+  },
+
+  _showSeeking: function(){
+    progress.addEventListener("mousemove", (e) => {
+      const elementWidth = e.target.offsetWidth;
+      const rect = e.target.getBoundingClientRect();
+      let currentPosition = e.clientX - rect.left;
+      let percentage = currentPosition / elementWidth * 100;
+      let currentSeeking = percentage * audio.duration /100
+      if(currentSeeking <= 0) currentSeeking = 0;
+      if(currentSeeking >= audio.duration) currentSeeking = audio.duration;
+      timeSeek.textContent = app._toMMSS(currentSeeking);
+      timeSeek.style.visibility = "visible";
+      timeSeek.style.opacity = "1";
+      timeSeek.style.top = `${e.clientY}px`;
+      timeSeek.style.left = `${currentPosition}px`;
+      progress.style.setProperty('--afterBack', `${percentage}%`)
+    });
   },
   
   _showVolume: function(){
@@ -216,6 +313,8 @@ const app = {
     progress.max = Math.floor(audio.duration);
     timeStart.textContent = this._toMMSS(audio.currentTime);
     timeEnd.textContent = this._toMMSS(audio.duration);
+    this._currentDeg = Math.round(progress.value * 360 / audio.duration);
+    cdThumb.style.transform = `rotate(${this._currentDeg}deg)`;
   },
 
   _handleEndedAudio: function (){
@@ -246,18 +345,35 @@ const app = {
     return minutes+':'+seconds;
   },
 
+  _escapeHTML: function(str) {
+    return str.replace(/[&<>"']/g, function (m) {
+      return ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      })[m];
+    });
+  },
+
+  _scrollToActiveSong() {
+    const activeSong = $('.song.active');
+    if (activeSong) {
+      activeSong.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  },
+
   _playCurrentSong: function(){
     if(audio.paused){
       playBtn.firstElementChild.classList = "fas fa-pause icon-pause";
-      cdThumb.classList.add('active');
-    //   Object.assign(cdThumb.style,{
-    //     'animation': `rotating ${audio.duration / 2}s linear infinite`,
-    //  })
+      audio.ontimeupdate = this._updateTimeHandler.bind(this);
       audio.play();
     } else{
       playBtn.firstElementChild.classList = 'fas fa-play icon-play';
-      cdThumb.classList.remove('active');
-      // cdThumb.attributeStyleMap.delete("animation")
       audio.pause();
     }
     
@@ -286,6 +402,8 @@ const app = {
 
     setTimeout(()=> {
       audio.play();
+      this._currentDeg = 0;
+      audio.ontimeupdate = this._updateTimeHandler.bind(this);
       playBtn.firstElementChild.classList = "fas fa-pause icon-pause";
       action === -1 
       ? prevBtn.firstElementChild.classList.remove('active')
@@ -293,18 +411,25 @@ const app = {
     }, 300);
   },
   
-  _renderCurrentSong: function (event) {
+  _renderCurrentSong: function (event, arr) {
     let songClick;
     if(event){
       songClick  = event.target.closest('.song');
       this._currentIndex = songClick.getAttribute('data-index')
     }
-    const activeSong = this._songs[this._currentIndex];
+    const activeTab = $(".tab.active").dataset.tab;
+    const activeSong = activeTab == 0
+      ? this._songs[this._currentIndex]
+      : this._likedSongs.length > 0 
+        ? this._likedSongs[this._currentIndex]
+        : this._songs[this._currentIndex];
     const songs = $$('.song');
     songs.forEach(song => {
       song.classList.remove('active');
     });
-    songs[this._currentIndex].classList.add('active');
+    if(songs[this._currentIndex])
+      songs[this._currentIndex].classList.add('active');
+    this._scrollToActiveSong();
     if(activeSong){
       heading.textContent = activeSong.name;
       cdThumbImg.src = activeSong.image;
@@ -313,6 +438,51 @@ const app = {
     }
     if(event)
       this._playCurrentSong();
+  },
+  _renderOptionList: function (index){
+    const html = `${this._songs[index]
+      ? `<li class="option-item option-like" data>
+          <i class="fas fa-heart"></i>
+        </li>`
+      : `<li class="option-item option-like">
+          <i class="far fa-heart"></i>
+        </li>`
+    }
+    <li class="option-item option-share"><i class="far fa-share-square"></i></li>`
+    $$('.option-list')[index].innerHTML = html;
+  },
+
+  renderArray: function(array){
+    const htmls = array.map((song, index) => {
+      return `
+      <div class="song ${ index === this._currentIndex ? "active" : "" }"
+      data-index="${index}">
+        <div class="thumb">
+          <img class="thumb-img" src="${song.image}" alt="">
+        </div>
+        <div class="body">
+          <h3 class="title">${song.name}</h3>
+          <p class="author">${song.singer}</p>
+        </div>
+        <div class="option">
+          <i class="fas fa-ellipsis-h"></i>
+          <ul class="option-list">
+            ${song.liked 
+              ? `<li class="option-item option-like" data>
+                  <i class="fas fa-heart"></i>
+                </li>`
+              : `<li class="option-item option-like">
+                  <i class="far fa-heart"></i>
+                </li>`
+            }
+            <li class="option-item option-share"><i class="far fa-share-square"></i></li>
+          </ul>
+        </div>
+      </div>
+      `;
+    });
+    playlist.innerHTML = htmls.join("");
+    this._renderCurrentSong();
   },
 
   render: function () {
@@ -329,12 +499,40 @@ const app = {
         </div>
         <div class="option">
           <i class="fas fa-ellipsis-h"></i>
+          <ul class="option-list">
+            ${song.liked 
+              ? `<li class="option-item option-like" data>
+                  <i class="fas fa-heart"></i>
+                </li>`
+              : `<li class="option-item option-like">
+                  <i class="far fa-heart"></i>
+                </li>`
+            }
+            <li class="option-item option-share"><i class="far fa-share-square"></i></li>
+          </ul>
         </div>
       </div>
       `;
     });
     playlist.innerHTML = htmls.join("");
     this._renderCurrentSong();
+  },
+
+  addEvent: function(){
+    $$('.thumb').forEach(el => {
+      el.onclick = this._renderCurrentSong.bind(this);
+    });
+    $$('.title').forEach(el => {
+      el.onclick = this._renderCurrentSong.bind(this);
+    });
+    $$('.option').forEach(el => {
+      el.onclick = function() {
+        el.querySelector('.option-list').classList.toggle('active');
+      }
+    })
+    $$('.option-like').forEach(el => {
+      el.onclick = this._addFav.bind(this);
+    })
   },
 
 };
