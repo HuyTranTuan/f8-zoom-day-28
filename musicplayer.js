@@ -148,11 +148,20 @@ const app = {
 
   _addFav: function(event){
     let index = event.target.closest('.song').dataset.index
-    let song = this._songs[index];
+    const activeTab = $(".tab.active").dataset.tab;
+    let song = activeTab == 0 ? this._songs[index] : this._likedSongs[index];
     song.liked = !song.liked;
     if(song.liked){
       this._likedSongs.push(song);
-    } else { this._likedSongs.pop(song)}
+    } else {
+      this._likedSongs.pop(song)
+    }
+    setLocalStorageList(this._likedSongs, "likedSongs");
+    getLocalStorageSongs();
+    this._tabActive();
+    activeTab == 0 
+    ? this.renderArray(this._songs)
+    : this.renderArray(this._likedSongs);
     this._renderOptionList(index);
   },
 
@@ -210,7 +219,7 @@ const app = {
       timeSeek.textContent = app._toMMSS(currentSeeking);
       timeSeek.style.visibility = "visible";
       timeSeek.style.opacity = "1";
-      timeSeek.style.top = `${e.clientY}px`;
+      timeSeek.style.top = `${e.target.offsetBottom + 30}px`;
       timeSeek.style.left = `${currentPosition}px`;
       progress.style.setProperty('--afterBack', `${percentage}%`)
     });
@@ -281,6 +290,10 @@ const app = {
           audio.volume = 1;
         }
         volume.value = audio.volume * 100;
+        volume.classList.add('active');
+        setTimeout(()=>{
+          volume.classList.remove('active');
+        }, 2000)
         break;
       case 'ArrowDown':
         if(audio.volume > 0.05){
@@ -290,6 +303,10 @@ const app = {
           audio.volume = 0;
         }
         volume.value = audio.volume * 100;
+        volume.classList.add('active');
+        setTimeout(()=>{
+          volume.classList.remove('active');
+        }, 2000)
         break;
       case 'ArrowLeft':
         if(audio.currentTime <= 5){
@@ -440,7 +457,9 @@ const app = {
       this._playCurrentSong();
   },
   _renderOptionList: function (index){
-    const html = `${this._songs[index]
+    const activeTab = $(".tab.active").dataset.tab;
+    const array = activeTab==0 ? this._songs : this._likedSongs
+    const html = `${array[index]
       ? `<li class="option-item option-like" data>
           <i class="fas fa-heart"></i>
         </li>`
@@ -534,7 +553,17 @@ const app = {
       el.onclick = this._addFav.bind(this);
     })
   },
-
 };
+
+const setLocalStorageList = (list, listName) => {
+  localStorage.setItem(listName, JSON.stringify(list));
+}
+
+function getLocalStorageSongs(){
+  app._songs = JSON.parse(localStorage.getItem('songs'))
+  app._likedSongs = JSON.parse(localStorage.getItem('likedSongs'))
+}
+setLocalStorageList(app._songs, "songs");
+getLocalStorageSongs();
 
 app.start();
