@@ -32,11 +32,11 @@ const tabs = $$('.tab');
 
 const app = {
   _currentSong: {},
-  _currentIndex: 0,
+  _currentIndex: JSON.parse(localStorage.getItem('musicStatus')).currentIndex || 0,
   _currentDeg: 0,
   _isPlaying: false,
-  _isRandom: false,
-  _currentRepeateStatus: 0,
+  _isRandom: JSON.parse(localStorage.getItem('musicStatus')).isRandom || false,
+  _currentRepeateStatus: JSON.parse(localStorage.getItem('musicStatus')).currentRepeat || 0,
   _config: {},
   _Next: 1,
   _Prev: -1,
@@ -83,6 +83,9 @@ const app = {
     prevBtn.onclick = this._playNextOrPrevSong.bind(this, this._Prev);
     repeatBtn.onclick = this._repeateSongHandler.bind(this, 1);
     randomBtn.onclick = this._shuffleSongHandler.bind(this);
+    this._isRandom
+      ? randomBtn.firstElementChild.classList.add('active')
+      : randomBtn.firstElementChild.classList.remove('active');
    
     audio.onloadedmetadata = this._updateTimeHandler.bind(this)
     audio.onended = this._handleEndedAudio.bind(this);
@@ -118,6 +121,16 @@ const app = {
     })
     inputSearch.oninput = this._search.bind(this);
 
+    window.addEventListener("beforeunload", function(event){
+      // Recommended
+      event.preventDefault();
+      
+      localStorage.setItem("musicStatus", JSON.stringify({
+        currentIndex: app._currentIndex,
+        isRandom: app._isRandom,
+        currentRepeat: app._currentRepeateStatus
+      }))
+    });
   },
 
   _removeTabActive:function(){
@@ -451,8 +464,8 @@ const app = {
       songClick  = event.target.closest('.song');
       this._currentIndex = songClick.getAttribute('data-index')
     }
-    const activeTab = $(".tab.active").dataset.tab;
-    const activeSong = activeTab == 0
+    const activeTab = parseInt($(".tab.active").dataset.tab);
+    const activeSong = activeTab === 0
       ? this._songs[this._currentIndex]
       : this._likedSongs.length > 0 
         ? this._likedSongs[this._currentIndex]
@@ -473,7 +486,7 @@ const app = {
     if(event)
       this._playCurrentSong();
   },
-  
+
   renderArray: function(array){
     const htmls = array.map((song, index) => {
       return `
