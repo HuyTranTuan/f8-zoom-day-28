@@ -344,14 +344,17 @@ header h2 {
   box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: scale 0.2s ease-in;
+  position: relative;
 }
 
 .song:hover {
   scale: 1.05;
+  z-index: 10;
 }
 
 .song.active {
   background-color: var(--primary-color);
+  z-index: 110;
 }
 
 .song:active {
@@ -424,6 +427,7 @@ header h2 {
 .option-list.active {
   visibility: visible;
   opacity: 1;
+  z-index: 100;
 }
 
 .option-item {
@@ -432,6 +436,7 @@ header h2 {
 .option-item:hover {
   background-color: var(--primary-color);
   color: white;
+  z-index: 100;
 }
 
 @media screen and (max-width: 720px) {

@@ -73,8 +73,10 @@ const app = {
     },
   ],
   start: function () {
-    this.render();
+    this.renderArray(this._songs);
     this.addEvent();
+    this.setLocalStorageList(this._songs, "songs");
+    this.setLocalStorageList(this._likedSongs, "likedSongs");
 
     playBtn.onclick = this._playCurrentSong.bind(this);
     nextBtn.onclick = this._playNextOrPrevSong.bind(this, this._Next);
@@ -130,7 +132,7 @@ const app = {
     let index = tab.dataset.tab;
     tab.classList.add('active');
     if(index == 0) {
-      this.render();
+      this.renderArray(this._songs);
       this.addEvent();
     };
     if(index == 1) {
@@ -145,27 +147,35 @@ const app = {
     let array = this._songs.filter(song => {
       return song.name.toLowerCase().includes(input) || song.singer.toLowerCase().includes(input);
     });
+    this._removeTabActive();
+    tabs[0].classList.add('active');
     this.renderArray(array);
   },
 
   _addFav: function(event){
     let index = event.target.closest('.song').dataset.index
-    const activeTab = $(".tab.active").dataset.tab;
-    let song = activeTab == 0 ? this._songs[index] : this._likedSongs[index];
-    song.liked = !song.liked;
-    if(song.liked){
-      this._likedSongs.push(song);
+    const activeTab = parseInt($(".tab.active").dataset.tab);
+    if(activeTab === 0){
+      this._songs[index].liked = !this._songs[index].liked;
     } else {
-      this._likedSongs.pop(song)
+      this._likedSongs[index].liked = !this._likedSongs[index].liked
     }
-    setLocalStorageList(app._songs, "songs");
-    setLocalStorageList(app._likedSongs, "likedSongs");
+    let song = activeTab === 0
+    ? this._songs[index]
+    : this._likedSongs[index];
     
-    this._tabActive();
-    activeTab == 0 
-    ? this.renderArray(this._songs)
-    : this.renderArray(this._likedSongs);
-    this._renderOptionList(index);
+    if(this._likedSongs.includes(song)){
+      this._likedSongs = this._likedSongs.filter(item => item.name !== song.name)
+    } else {
+      this._likedSongs.push(song);
+    }
+    this.setLocalStorageList(this._songs, "songs");
+    this.setLocalStorageList(this._likedSongs, "likedSongs");
+
+    activeTab === 0 
+      ? this.renderArray(this._songs)
+      : this.renderArray(this._likedSongs);
+    
   },
 
   _getDeg: function(opposite,adjacent){
@@ -400,6 +410,10 @@ const app = {
   },
 
   _playNextOrPrevSong: function(action){
+    const activeTab = parseInt($(".tab.active").dataset.tab);
+    const list = activeTab === 0
+      ? this._songs
+      : this._likedSongs
     playBtn.firstElementChild.classList = 'fas fa-play icon-play';
     action === -1 
       ? prevBtn.firstElementChild.classList.add('active')
@@ -414,7 +428,7 @@ const app = {
         }
         this._currentIndex = random;
       }else{
-        this._currentIndex = ((this._currentIndex + action + this._songs.length) % this._songs.length);
+        this._currentIndex = ((this._currentIndex + action + list.length) % list.length);
       }
       this._renderCurrentSong();
     }
@@ -431,7 +445,7 @@ const app = {
     }, 300);
   },
   
-  _renderCurrentSong: function (event, arr) {
+  _renderCurrentSong: function (event) {
     let songClick;
     if(event){
       songClick  = event.target.closest('.song');
@@ -459,21 +473,7 @@ const app = {
     if(event)
       this._playCurrentSong();
   },
-  _renderOptionList: function (index){
-    const activeTab = $(".tab.active").dataset.tab;
-    const array = activeTab==0 ? this._songs : this._likedSongs
-    const html = `${array[index]
-      ? `<li class="option-item option-like" data>
-          <i class="fas fa-heart"></i>
-        </li>`
-      : `<li class="option-item option-like">
-          <i class="far fa-heart"></i>
-        </li>`
-    }
-    <li class="option-item option-share"><i class="far fa-share-square"></i></li>`
-    $$('.option-list')[index].innerHTML = html;
-  },
-
+  
   renderArray: function(array){
     const htmls = array.map((song, index) => {
       return `
@@ -505,40 +505,7 @@ const app = {
     });
     playlist.innerHTML = htmls.join("");
     this._renderCurrentSong();
-
-  },
-
-  render: function () {
-    const htmls = this._songs.map((song, index) => {
-      return `
-      <div class="song ${ index === this._currentIndex ? "active" : "" }"
-      data-index="${index}">
-        <div class="thumb">
-          <img class="thumb-img" src="${song.image}" alt="">
-        </div>
-        <div class="body">
-          <h3 class="title">${song.name}</h3>
-          <p class="author">${song.singer}</p>
-        </div>
-        <div class="option">
-          <i class="fas fa-ellipsis-h"></i>
-          <ul class="option-list">
-            ${song.liked 
-              ? `<li class="option-item option-like" data>
-                  <i class="fas fa-heart"></i>
-                </li>`
-              : `<li class="option-item option-like">
-                  <i class="far fa-heart"></i>
-                </li>`
-            }
-            <li class="option-item option-share"><i class="far fa-share-square"></i></li>
-          </ul>
-        </div>
-      </div>
-      `;
-    });
-    playlist.innerHTML = htmls.join("");
-    this._renderCurrentSong();
+    this.addEvent();
   },
 
   addEvent: function(){
@@ -557,15 +524,12 @@ const app = {
       el.onclick = this._addFav.bind(this);
     })
   },
+
+  setLocalStorageList: function(list, listName){
+    if(list){
+      localStorage.setItem(listName, JSON.stringify(list));
+    } else localStorage.setItem(listName, JSON.stringify([]));
+  }
 };
-
-const setLocalStorageList = (list, listName) => {
-  if(list){
-    localStorage.setItem(listName, JSON.stringify(list));
-  } else localStorage.setItem(listName, JSON.stringify([]));
-}
-
-setLocalStorageList(app._songs, "songs");
-setLocalStorageList(app._likedSongs, "likedSongs");
 
 app.start();
