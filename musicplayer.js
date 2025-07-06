@@ -32,17 +32,17 @@ const tabs = $$('.tab');
 
 const app = {
   _currentSong: {},
-  _currentIndex: JSON.parse(localStorage.getItem('musicStatus')).currentIndex ?? 0,
+  _currentIndex: localStorage.getItem('musicStatus') ? JSON.parse(localStorage.getItem('musicStatus')).currentIndex : 0,
   _currentDeg: 0,
   _isPlaying: false,
-  _isRandom: JSON.parse(localStorage.getItem('musicStatus')).isRandom ?? false,
-  _currentRepeateStatus: JSON.parse(localStorage.getItem('musicStatus')).currentRepeat ?? 0,
+  _isRandom: localStorage.getItem('musicStatus') ? JSON.parse(localStorage.getItem('musicStatus')).isRandom : false,
+  _currentRepeateStatus: localStorage.getItem('musicStatus') ? JSON.parse(localStorage.getItem('musicStatus')).currentRepeat : 0,
   _config: {},
   _Next: 1,
   _Prev: -1,
-  _likedSongs: JSON.parse(localStorage.getItem('likedSongs')) ?? [],
+  _likedSongs: localStorage.getItem('likedSongs') ? JSON.parse(localStorage.getItem('likedSongs')) : [],
   
-  _songs: JSON.parse(localStorage.getItem('songs')) ?? [
+  _songs: localStorage.getItem('songs') ? JSON.parse(localStorage.getItem('songs')) : [
     {
       name: "Bad Day",
       singer: "Daniel Powter",
