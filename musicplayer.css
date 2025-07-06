@@ -20,7 +20,10 @@ html {
 }
 
 .header {
+  margin: 0 auto;
   padding: 30px;
+  width: 100%;
+  max-width: 1600px;
 }
 .search-form {
   max-width: 500px;

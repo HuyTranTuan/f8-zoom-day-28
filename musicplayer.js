@@ -1,3 +1,5 @@
+"use strict";
+
 const $ = document.querySelector.bind(document);
 const $$ = document.querySelectorAll.bind(document);
 
@@ -38,9 +40,9 @@ const app = {
   _config: {},
   _Next: 1,
   _Prev: -1,
-  _likedSongs: [],
+  _likedSongs: JSON.parse(localStorage.getItem('likedSongs')) || [],
   
-  _songs: [
+  _songs: JSON.parse(localStorage.getItem('songs')) || [
     {
       name: "Bad Day",
       singer: "Daniel Powter",
@@ -156,8 +158,9 @@ const app = {
     } else {
       this._likedSongs.pop(song)
     }
-    setLocalStorageList(this._likedSongs, "likedSongs");
-    getLocalStorageSongs();
+    setLocalStorageList(app._songs, "songs");
+    setLocalStorageList(app._likedSongs, "likedSongs");
+    
     this._tabActive();
     activeTab == 0 
     ? this.renderArray(this._songs)
@@ -502,6 +505,7 @@ const app = {
     });
     playlist.innerHTML = htmls.join("");
     this._renderCurrentSong();
+
   },
 
   render: function () {
@@ -556,14 +560,12 @@ const app = {
 };
 
 const setLocalStorageList = (list, listName) => {
-  localStorage.setItem(listName, JSON.stringify(list));
+  if(list){
+    localStorage.setItem(listName, JSON.stringify(list));
+  } else localStorage.setItem(listName, JSON.stringify([]));
 }
 
-function getLocalStorageSongs(){
-  app._songs = JSON.parse(localStorage.getItem('songs'))
-  app._likedSongs = JSON.parse(localStorage.getItem('likedSongs'))
-}
 setLocalStorageList(app._songs, "songs");
-getLocalStorageSongs();
+setLocalStorageList(app._likedSongs, "likedSongs");
 
 app.start();
